@@ -22,6 +22,7 @@ import sys
 import re
 import shutil
 import subprocess
+import typing
 import zipfile
 
 from pathlib import Path
@@ -75,7 +76,7 @@ from .process import (filter_config,
                       update_emb_config,
                       generate_random_df,
                       populate)
-                      
+
 from .utils import (tupleit,
                    _open_config,
                    _open_cog_config,
@@ -115,10 +116,10 @@ COGNIVAL_SOURCES_URL = 'https://drive.google.com/uc?id=1ouonaByYn2cnDAWihnQ3cGmM
 @command
 @argument("processes", type=int, description="No. of processes")
 @argument("n_gpus", type=int, description="No. of processes")
-@argument("embeddings", type=list, description="List of embeddings")
-@argument('modalities', type=list, description="Modalities of cognitive sources")
-@argument("cognitive_sources", type=list, description="List of cognitive sources")
-@argument("cognitive_features", type=list, description="List of cognitive features")
+@argument("embeddings", type=typing.List[str], description="List of embeddings")
+@argument('modalities', type=typing.List[str], description="Modalities of cognitive sources")
+@argument("cognitive_sources", type=typing.List[str], description="List of cognitive sources")
+@argument("cognitive_features", type=typing.List[str], description="List of cognitive features")
 @argument("baselines", type=bool, description="Compute random baseline(s) corresponding to specified embedding")
 def run(embeddings=['all'],
         modalities=None,
@@ -163,7 +164,7 @@ def run(embeddings=['all'],
 @command
 class List:
     """List properties of configurations, embeddings and cognitive sources.
-    [Sub-commands] 
+    [Sub-commands]
     - configs: List available configurations (except reference configuration, which is read-only)
     - embeddings: List available and imported default embeddings, generated random baselines and imported custom embeddings
     - cognitive-sources: List imported cognitive sources.
@@ -183,7 +184,7 @@ class List:
         '''
         ctx = context.get_context()
         resources_path = ctx.resources_path
-        
+
         formatted_list = commands.list_configs(resources_path)
 
         page_list([x.encode('utf-8') for x in formatted_list])
@@ -214,7 +215,7 @@ class List:
         if not cog_config['cognival_installed']:
             cprint('CogniVal cognitive sources not imported, aborting ...', 'red')
             return
-        
+
         formatted_list = commands.list_cognitive_sources(cog_config)
 
         page_list([x.encode('utf-8') for x in formatted_list])
@@ -251,7 +252,7 @@ class Config:
         ctx = context.get_context()
         cognival_path = ctx.cognival_path
         resources_path = ctx.resources_path
-        
+
         try:
             configuration, _ = commands.config_open(configuration, cognival_path, resources_path, edit, overwrite)
         except TypeError:
@@ -260,7 +261,7 @@ class Config:
         if configuration:
             cprint('Configuration {} is now active.'.format(configuration), 'yellow')
             ctx.open_config = configuration
-    
+
     @command
     @argument("details", type=bool, description="Whether to show details for all cognitive sources. Ignored when cognitive_source is specified.")
     @argument("cognitive_source", type=str, description="Cognitive source for which details should be shown")
@@ -284,11 +285,11 @@ class Config:
         table_strs = commands.config_show(configuration, config_dict, details, cognitive_source, hide_baselines)
 
         page_list([x.encode('utf-8') for x in table_strs])
-    
+
     @command
-    @argument('modalities', type=list, description="Modalities of cognitive sources sources to include.")
-    @argument('cognitive_sources', type=list, description="Either list of cognitive sources or ['all'] (default).")
-    @argument('embeddings', type=list, description="Either list of embeddings or ['all'] (default)")
+    @argument('modalities', type=typing.List[str], description="Modalities of cognitive sources sources to include.")
+    @argument('cognitive_sources', type=typing.List[str], description="Either list of cognitive sources or ['all'] (default).")
+    @argument('embeddings', type=typing.List[str], description="Either list of embeddings or ['all'] (default)")
     @argument('baselines', type=bool, description='Whether to include random baselines (default: True). Only considered on initial population and fixed afterwards. Note that if random baselines were included previously, changes are applied to them in any case.')
     @argument('single_edit', type=bool, description='Whether to edit embedding specifics one by one or all at once.')
     @argument('edit_cog_source_params', type=bool, description='Whether to edit parameters of the specified cognitive sources.')
@@ -337,10 +338,10 @@ class Config:
 
 
     @command
-    @argument('modalities', type=list, description="Modalities of cognitive sources to delete.")
-    @argument('cognitive_sources', type=list, description="Either list of cognitive sources or None (for all)")
-    @argument('embeddings', type=list, description="Either list of embeddings or None (for all)")
-    def delete(self, modalities=None, cognitive_sources=None, embeddings=None):        
+    @argument('modalities', type=typing.List[str], description="Modalities of cognitive sources to delete.")
+    @argument('cognitive_sources', type=typing.List[str], description="Either list of cognitive sources or None (for all)")
+    @argument('embeddings', type=typing.List[str], description="Either list of embeddings or None (for all)")
+    def delete(self, modalities=None, cognitive_sources=None, embeddings=None):
         '''
         Remove cognitive sources or experiments (cog.source - embedding combinations) from specified configuration or
         delete entire configuration.
@@ -365,7 +366,7 @@ class Config:
                                                 embeddings)
 
         _backup_config(configuration, resources_path)
-        
+
         if main_conf_dict:
             _save_config(main_conf_dict, configuration, resources_path)
 
@@ -411,7 +412,7 @@ def significance(run_id=0,
 def aggregate(run_id=0,
               modalities=['eye-tracking', 'eeg', 'fmri'],
               test="Wilcoxon",
-              quiet=False):    
+              quiet=False):
     '''
     Test significance of results in the given modality and produced based on the specified configuration.
 ―
@@ -574,7 +575,7 @@ def history():
                 pager_list.append(colored(line, 'green').encode('utf-8'))
             else:
                 pager_list.append(colored(line.lstrip('+'), 'white').encode('utf-8'))
-    
+
     # Reverse order of time-stamp-command-whitespace line triplets
     pager_list = itertools.chain.from_iterable(list(chunks(pager_list, 3))[::-1])
     page_list(pager_list)
@@ -719,7 +720,7 @@ def example_calls(command=None):
 ―
     '''
     table_rows = []
-    
+
     def get_table_rows(cmd, parametrization):
         if isinstance(parametrization, list):
             for example in parametrization:
@@ -738,13 +739,13 @@ def example_calls(command=None):
                         example['subcommand'] = subcommand
                         example['description'] = fill(example['description'], 20)
                         table_rows.append(example)
-        
+
     if not command:
         for command, parametrization in EXAMPLE_COMMANDS.items():
             get_table_rows(command, parametrization)
     else:
         get_table_rows(command, EXAMPLE_COMMANDS[command])
-        
+
     df_cli = pd.DataFrame(table_rows)
     df_cli = df_cli[['command', 'subcommand', 'example', 'description']]
     df_cli.columns = [colored(col.title(), attrs=['bold']) for col in df_cli.columns]
